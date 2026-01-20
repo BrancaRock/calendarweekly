@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Horario Semanal - Visor</title>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #121317;
+      --card: #1B1A1F;
+      --text: #EDEDEE;
+      --muted: #B3B3B7;
+      --radius: 16px;
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --primary: #4CAF50;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      user-select: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0 15px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 500;
+    }
+
+    #last-saved {
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    .save-img-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .save-img-btn:hover {
+      background: #43a047;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 60px repeat(7, minmax(120px, 1fr));
+      gap: 0;
+      border: 1px solid #444;
+      border-radius: var(--radius);
+      overflow-x: auto;
+      overflow-y: hidden;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .cell.header {
+      min-height: 50px;
+      padding: 8px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: #25242A;
+      font-weight: bold;
+      border-bottom: 1px solid #444;
+    }
+
+    .time-col {
+      background: #1F1E24;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      min-height: 220px;
+    }
+
+    .slot {
+      background: rgba(76, 175, 80, 0.18);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      max-width: 130px;
+      margin: 0 auto;
+      font-size: 14px;
+      font-weight: 500;
+      box-sizing: border-box;
+    }
+
+    /* Distribución vertical según cantidad de slots */
+    .slot-1 { flex: 1 1 auto; height: auto; min-height: 140px; }
+    .slot-2 { flex: 1 1 50%;  height: auto; min-height: 100px; }
+    .slot-3 { flex: 1 1 33%;  height: auto; min-height:  70px; }
+
+    .slot-name {
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    .slot-hours {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div>
+      <h2>Horario Semanal <span id="last-saved"></span></h2>
+    </div>
+    <button class="save-img-btn" id="save-image">Guardar imagen</button>
+  </div>
+
+  <div class="grid" id="weekly-grid">
+    <div class="cell header"></div>
+    <div class="cell header">Lunes</div>
+    <div class="cell header">Martes</div>
+    <div class="cell header">Miércoles</div>
+    <div class="cell header">Jueves</div>
+    <div class="cell header">Viernes</div>
+    <div class="cell header">Sábado</div>
+    <div class="cell header">Domingo</div>
+
+    <div class="cell time-col">Turnos</div>
+
+    <div class="cell"><div class="day-column" data-day="Lunes"></div></div>
+    <div class="cell"><div class="day-column" data-day="Martes"></div></div>
+    <div class="cell"><div class="day-column" data-day="Miércoles"></div></div>
+    <div class="cell"><div class="day-column" data-day="Jueves"></div></div>
+    <div class="cell"><div class="day-column" data-day="Viernes"></div></div>
+    <div class="cell"><div class="day-column" data-day="Sábado"></div></div>
+    <div class="cell"><div class="day-column" data-day="Domingo"></div></div>
+  </div>
+
+</div>
+
+<script>
+  // ── Firebase ────────────────────────────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyBlXlh4E3ZA7EZWa1jp9g3D9NYMPA3EU6o",
+    authDomain: "maxikiosco365-cts.firebaseapp.com",
+    databaseURL: "https://maxikiosco365-cts-default-rtdb.firebaseio.com",
+    projectId: "maxikiosco365-cts",
+    storageBucket: "maxikiosco365-cts.firebasestorage.app",
+    messagingSenderId: "626205380433",
+    appId: "1:626205380433:web:3057e76c60629b89b80d70"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Mapeo de códigos opacos → sucursal real
+  const codeToSucursal = {
+    'x9k2p7m': 'unne',
+    'q4v8r1n': 'sarmiento',
+    'z6t3w9f': 'alta_gracia',
+    'b2j5h8c': 'morgue'
+  };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('k') || 'x9k2p7m';  // default UNNE
+
+  const sucursalCode = codeToSucursal[code] || 'unne'; // fallback
+
+  const sucursalNames = {
+    unne: "UNNE",
+    sarmiento: "Sarmiento",
+    alta_gracia: "Alta Gracia",
+    morgue: "Morgue"
+  };
+
+  const sucursalDisplay = sucursalNames[sucursalCode] || sucursalCode.toUpperCase();
+
+  const scheduleRef = db.ref(`${sucursalCode}/weekly_schedule`);
+
+  scheduleRef.on('value', (snap) => {
+    const data = snap.val() || {};
+    document.getElementById("last-saved").textContent = 
+      data.last_saved 
+        ? `(${sucursalDisplay} - Último: ${data.last_saved})` 
+        : `(${sucursalDisplay})`;
+
+    document.querySelectorAll('.day-column').forEach(col => {
+      col.innerHTML = '';
+      const day = col.dataset.day;
+      const turns = data[day] || ['', '', ''];
+      const validTurns = turns.filter(name => name && name.trim());
+
+      validTurns.forEach((name, idx) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.classList.add(`slot-${validTurns.length}`);
+
+        let hoursText;
+        if (validTurns.length === 1) {
+          hoursText = '16 horas';
+        } else if (validTurns.length === 2) {
+          hoursText = '12 horas';
+        } else {
+          hoursText = idx === 0 ? '16 horas' : idx === 1 ? '12 horas' : '8 horas';
+        }
+
+        slot.innerHTML = `
+          <div class="slot-name">${name}</div>
+          <div class="slot-hours">${hoursText}</div>
+        `;
+        col.appendChild(slot);
+      });
+    });
+  });
+
+  // ── Guardar como imagen ─────────────────────────────────────────────────────
+  document.getElementById('save-image').addEventListener('click', () => {
+    const element = document.querySelector('.container');
+    const button = document.querySelector('.save-img-btn');
+    
+    button.style.display = 'none';
+
+    html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null
+    }).then(canvas => {
+      const link = document.createElement('a');
+      
+      const today = new Date().toLocaleDateString('es-AR', {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).replace(/\//g, '-');
+      
+      link.download = `horario_\( {sucursalDisplay}_ \){today}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.92);
+      link.click();
+
+      button.style.display = '';
+    }).catch(err => {
+      console.error('Error al generar imagen:', err);
+      button.style.display = '';
+      alert('No se pudo generar la imagen. Intenta de nuevo.');
+    });
+  });
+</script>
+
+</body>
+</html>
