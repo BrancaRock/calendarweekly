@@ -241,13 +241,14 @@
         slot.className = 'slot';
         slot.classList.add(`slot-${validTurns.length}`);
 
+        // Lógica corregida de horas según cantidad de slots
         let hoursText;
         if (validTurns.length === 1) {
           hoursText = '16 horas';
         } else if (validTurns.length === 2) {
           hoursText = '12 horas';
-        } else {
-          hoursText = idx === 0 ? '16 horas' : idx === 1 ? '12 horas' : '8 horas';
+        } else if (validTurns.length === 3) {
+          hoursText = '8 horas';  // ← Todos los 3 slots muestran 8 horas
         }
 
         slot.innerHTML = `
@@ -276,6 +277,7 @@
       const today = new Date().toLocaleDateString('es-AR', {
         year: 'numeric', month: '2-digit', day: '2-digit'
       }).replace(/\//g, '-');
+      
       link.download = `horario_${sucursalDisplay}_${today}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.92);
       link.click();
@@ -290,4 +292,4 @@
 </script>
 
 </body>
-</html>
+  </html>
