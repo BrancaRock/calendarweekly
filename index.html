@@ -223,6 +223,49 @@
 
   const scheduleRef = db.ref(`${sucursalCode}/weekly_schedule`);
 
+  // ── Función para reordenar los días según sucursal ───────────────────────────
+  function reorderCalendarDays() {
+    const defaultOrder = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+    let newOrder = [...defaultOrder];
+
+    if (sucursalCode === "alta_gracia" || sucursalCode === "sarmiento") {
+      newOrder = ["Miércoles", "Jueves", "Viernes", "Sábado", "Domingo", "Lunes", "Martes"];
+    }
+    // unne y morgue mantienen lunes-domingo
+
+    const weeklyGrid = document.getElementById("weekly-grid");
+
+    // Guardar referencias
+    const timeColCell = weeklyGrid.querySelector('.cell.time-col');
+    const headers = Array.from(weeklyGrid.querySelectorAll(".cell.header")).slice(1);
+    const columns = Array.from(weeklyGrid.querySelectorAll(".day-column")).map(col => col.parentElement);
+
+    const headerMap = {};
+    headers.forEach(h => headerMap[h.textContent.trim()] = h);
+
+    const columnMap = {};
+    columns.forEach(c => {
+      const day = c.querySelector(".day-column").dataset.day;
+      columnMap[day] = c;
+    });
+
+    // Remover headers y columnas actuales
+    headers.forEach(h => h.remove());
+    columns.forEach(c => c.remove());
+
+    // Reinsertar headers (antes de la columna "Turnos")
+    newOrder.forEach(day => {
+      weeklyGrid.insertBefore(headerMap[day], timeColCell);
+    });
+
+    // Reinsertar las columnas de días (después de "Turnos")
+    newOrder.forEach(day => {
+      weeklyGrid.appendChild(columnMap[day]);
+    });
+  }
+
+  // ── Cargar datos desde Firebase ─────────────────────────────────────────────
   scheduleRef.on('value', (snap) => {
     const data = snap.val() || {};
     document.getElementById("last-saved").textContent = 
@@ -230,6 +273,7 @@
         ? `(${sucursalDisplay} - Último: ${data.last_saved})` 
         : `(${sucursalDisplay})`;
 
+    // Limpiar y rellenar slots (usando el orden actual de los data-day)
     document.querySelectorAll('.day-column').forEach(col => {
       col.innerHTML = '';
       const day = col.dataset.day;
@@ -241,14 +285,13 @@
         slot.className = 'slot';
         slot.classList.add(`slot-${validTurns.length}`);
 
-        // Lógica corregida de horas según cantidad de slots
         let hoursText;
         if (validTurns.length === 1) {
           hoursText = '16 horas';
         } else if (validTurns.length === 2) {
           hoursText = '12 horas';
-        } else if (validTurns.length === 3) {
-          hoursText = '8 horas';  // ← Todos los 3 slots muestran 8 horas
+        } else {
+          hoursText = idx === 0 ? '16 horas' : idx === 1 ? '12 horas' : '8 horas';
         }
 
         slot.innerHTML = `
@@ -278,7 +321,7 @@
         year: 'numeric', month: '2-digit', day: '2-digit'
       }).replace(/\//g, '-');
       
-      link.download = `horario_${sucursalDisplay}_${today}.jpg`;
+      link.download = `horario_\( {sucursalDisplay}_ \){today}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.92);
       link.click();
 
@@ -288,6 +331,11 @@
       button.style.display = '';
       alert('No se pudo generar la imagen. Intenta de nuevo.');
     });
+  });
+
+  // ── Inicialización ──────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    reorderCalendarDays();   // ← Esto hace que se adapte según la sucursal
   });
 </script>
 
