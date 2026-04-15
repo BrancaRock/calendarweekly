@@ -232,11 +232,9 @@
     if (sucursalCode === "alta_gracia" || sucursalCode === "sarmiento") {
       newOrder = ["Miércoles", "Jueves", "Viernes", "Sábado", "Domingo", "Lunes", "Martes"];
     }
-    // unne y morgue mantienen lunes-domingo
 
     const weeklyGrid = document.getElementById("weekly-grid");
 
-    // Guardar referencias
     const timeColCell = weeklyGrid.querySelector('.cell.time-col');
     const headers = Array.from(weeklyGrid.querySelectorAll(".cell.header")).slice(1);
     const columns = Array.from(weeklyGrid.querySelectorAll(".day-column")).map(col => col.parentElement);
@@ -250,16 +248,13 @@
       columnMap[day] = c;
     });
 
-    // Remover headers y columnas actuales
     headers.forEach(h => h.remove());
     columns.forEach(c => c.remove());
 
-    // Reinsertar headers (antes de la columna "Turnos")
     newOrder.forEach(day => {
       weeklyGrid.insertBefore(headerMap[day], timeColCell);
     });
 
-    // Reinsertar las columnas de días (después de "Turnos")
     newOrder.forEach(day => {
       weeklyGrid.appendChild(columnMap[day]);
     });
@@ -273,7 +268,6 @@
         ? `(${sucursalDisplay} - Último: ${data.last_saved})` 
         : `(${sucursalDisplay})`;
 
-    // Limpiar y rellenar slots (usando el orden actual de los data-day)
     document.querySelectorAll('.day-column').forEach(col => {
       col.innerHTML = '';
       const day = col.dataset.day;
@@ -286,12 +280,10 @@
         slot.classList.add(`slot-${validTurns.length}`);
 
         let hoursText;
-        if (validTurns.length === 1) {
-          hoursText = '16 horas';
-        } else if (validTurns.length === 2) {
+        if (validTurns.length === 1 || validTurns.length === 2) {
           hoursText = '12 horas';
         } else {
-          hoursText = idx === 0 ? '16 horas' : idx === 1 ? '12 horas' : '8 horas';
+          hoursText = '8 horas';
         }
 
         slot.innerHTML = `
@@ -335,9 +327,9 @@
 
   // ── Inicialización ──────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
-    reorderCalendarDays();   // ← Esto hace que se adapte según la sucursal
+    reorderCalendarDays();
   });
 </script>
 
 </body>
-  </html>
+</html>
